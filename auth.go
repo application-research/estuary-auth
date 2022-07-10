@@ -1,24 +1,30 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/xerrors"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"net/http"
 	"time"
 )
 
+//	Authorization structures
 type AuthorizationServer struct {
 	// The authorization server's identifier.
+	*Authorization
+}
+
+type Authorization struct {
 	DB     *gorm.DB
-	Server interface{}
 	tracer trace.Tracer
 }
 
-type AuthToken struct {
+// Data models
+type Token struct {
 	gorm.Model
 	Token      string `gorm:"unique"`
 	User       uint
@@ -28,35 +34,62 @@ type AuthToken struct {
 
 type User struct {
 	gorm.Model
-	UUID     string `gorm:"unique"`
-	Username string `gorm:"unique"`
-	PassHash string
-	DID      string
-
-	UserEmail string
-
-	authToken AuthToken
-	Perm      int
-	Flags     int
-
+	UUID            string `gorm:"unique"`
+	Username        string `gorm:"unique"`
+	PassHash        string
+	DID             string
+	UserEmail       string
+	AuthToken       Token
+	Perm            int
+	Flags           int
 	StorageDisabled bool
 }
 
 //	Initialize
 func Init() *AuthorizationServer {
-	return &AuthorizationServer{}
+	return &AuthorizationServer{} // create the authorization server
 }
 
-//	Set DB
-func (s *AuthorizationServer) setDB(db *gorm.DB) *AuthorizationServer {
-	s.DB = db
+//	Sets a database connection.
+func (s *AuthorizationServer) SetDB(db *gorm.DB) *AuthorizationServer {
+	s.DB = db // connect to the database
 	return s
 }
 
-func (s *AuthorizationServer) checkTokenAuth(token string) (*User, error) {
-	var authToken AuthToken
+//	Set database connection with a string dsn
+func (s *AuthorizationServer) SetDBWithString(dbConnection string) *AuthorizationServer {
+
+	db, err := gorm.Open(postgres.Open(dbConnection), &gorm.Config{})
+	if err != nil {
+		panic(err) // database connection is required
+	}
+
+	s.DB = db // connect to the database
+	return s
+}
+
+func (s *AuthorizationServer) SetDBConfig(dbConnection postgres.Config) *AuthorizationServer {
+
+	db, err := gorm.Open(postgres.New(dbConnection), &gorm.Config{})
+
+	if err != nil {
+		panic(err) // database connection is required
+	}
+
+	s.DB = db // connect to the database
+	return s
+}
+
+//	Connect to the server and return the Authorization object
+func (s *AuthorizationServer) Connect() *Authorization {
+	return s.Authorization
+}
+
+// Checking if the token is valid.
+func (s *Authorization) CheckAuthorizationToken(token string) (*User, error) {
+	var authToken Token
 	if err := s.DB.First(&authToken, "token = ?", token).Error; err != nil {
-		if xerrors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, &HttpError{
 				Code:    http.StatusUnauthorized,
 				Reason:  ERR_INVALID_TOKEN,
@@ -76,7 +109,7 @@ func (s *AuthorizationServer) checkTokenAuth(token string) (*User, error) {
 
 	var user User
 	if err := s.DB.First(&user, "id = ?", authToken.User).Error; err != nil {
-		if xerrors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, &HttpError{
 				Code:    http.StatusUnauthorized,
 				Reason:  ERR_INVALID_TOKEN,
@@ -86,11 +119,12 @@ func (s *AuthorizationServer) checkTokenAuth(token string) (*User, error) {
 		return nil, err
 	}
 
-	user.authToken = authToken
+	user.AuthToken = authToken
 	return &user, nil
 }
 
-func (s *AuthorizationServer) AuthRequired(level int) echo.MiddlewareFunc {
+// A middleware that checks if the user is authorized to access the API.
+func (s *Authorization) AuthRequired(level int) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 
@@ -105,14 +139,14 @@ func (s *AuthorizationServer) AuthRequired(level int) echo.MiddlewareFunc {
 			defer span.End()
 			c.SetRequest(c.Request().WithContext(ctx))
 
-			u, err := s.checkTokenAuth(auth)
+			u, err := s.CheckAuthorizationToken(auth)
 			if err != nil {
 				return err
 			}
 
 			span.SetAttributes(attribute.Int("user", int(u.ID)))
 
-			if u.authToken.UploadOnly && level >= PermLevelUser {
+			if u.AuthToken.UploadOnly && level >= PermLevelUser {
 				return &HttpError{
 					Code:    http.StatusForbidden,
 					Reason:  ERR_NOT_AUTHORIZED,

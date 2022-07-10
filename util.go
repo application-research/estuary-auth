@@ -60,7 +60,7 @@ const (
 // isValidAuth checks if authStr is a valid
 // returns false if authStr is not in a valid format
 // returns true otherwise
-func isValidAuth(authStr string) bool {
+func IsValidAuth(authStr string) bool {
 	matchEst, _ := regexp.MatchString("^EST(.+)ARY$", authStr)
 	matchSecret, _ := regexp.MatchString("^SECRET(.+)SECRET$", authStr)
 	if !matchEst && !matchSecret {

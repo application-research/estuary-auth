@@ -19,15 +19,13 @@ go get github.com/alvin-reyes/estuary-auth
 //  initialize your database connection (estuary) - readonly
 
 //  create the authorization middleware
-authorization := new(AuthorizationServer)
-authorization.Init().SetDB(db);
-
+authorizationServer := new(AuthorizationServer)
+auth := authorizationServer.Init().SetDB(db).Connect()
 ```
 
 ## Use the middleware on your new Estuary API
 ```
 //  add the authorization middleware to the Estuary middleware
 //  PermLevelUpload = 1, PermLevelUser   = 2, PermLevelAdmin  = 10
-e.GET("/metrics/", s.handleMetrics, authorization.AuthRequired(authorization.PermLevelUser))
+e.GET("/metrics/", s.handleMetrics, auth.AuthRequired(authorization.PermLevelUser))
 ```
-
