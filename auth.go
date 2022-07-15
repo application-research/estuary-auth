@@ -139,7 +139,7 @@ func (s *Authorization) AuthRequired(level int) echo.MiddlewareFunc {
 			defer span.End()
 			c.SetRequest(c.Request().WithContext(ctx))
 
-			u, err := s.CheckAuthorizationToken(auth)
+			u, err := s.CheckAuthorizationToken(auth, level)
 			if err != nil {
 				return err
 			}
