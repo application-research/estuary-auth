@@ -15,7 +15,7 @@ import (
 //	Authorization structures
 type AuthorizationServer struct {
 	// The authorization server's identifier.
-	*Authorization
+	Authorization
 }
 
 type Authorization struct {
@@ -24,7 +24,7 @@ type Authorization struct {
 }
 
 // Data models
-type Token struct {
+type AuthToken struct {
 	gorm.Model
 	Token      string `gorm:"unique"`
 	User       uint
@@ -39,7 +39,7 @@ type User struct {
 	PassHash        string
 	DID             string
 	UserEmail       string
-	AuthToken       Token
+	authToken       AuthToken
 	Perm            int
 	Flags           int
 	StorageDisabled bool
@@ -81,13 +81,13 @@ func (s *AuthorizationServer) SetDBConfig(dbConnection postgres.Config) *Authori
 }
 
 //	Connect to the server and return the Authorization object
-func (s *AuthorizationServer) Connect() *Authorization {
+func (s *AuthorizationServer) Connect() Authorization {
 	return s.Authorization
 }
 
 // Checking if the token is valid.
-func (s *Authorization) CheckAuthorizationToken(token string, permission int) (*User, error) {
-	var authToken Token
+func (s Authorization) CheckAuthorizationToken(token string, permission int) (*User, error) {
+	var authToken AuthToken
 	if err := s.DB.First(&authToken, "token = ?", token).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, &HttpError{
@@ -108,7 +108,7 @@ func (s *Authorization) CheckAuthorizationToken(token string, permission int) (*
 	}
 
 	var user User
-	if err := s.DB.First(&user, "id = ? and perm = ?", authToken.User, permission).Error; err != nil {
+	if err := s.DB.First(&user, "id = ?", authToken.User).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, &HttpError{
 				Code:    http.StatusUnauthorized,
@@ -119,12 +119,12 @@ func (s *Authorization) CheckAuthorizationToken(token string, permission int) (*
 		return nil, err
 	}
 
-	user.AuthToken = authToken
+	user.authToken = authToken
 	return &user, nil
 }
 
 // A middleware that checks if the user is authorized to access the API.
-func (s *Authorization) AuthRequired(level int) echo.MiddlewareFunc {
+func (s Authorization) AuthRequired(level int) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 
@@ -146,7 +146,7 @@ func (s *Authorization) AuthRequired(level int) echo.MiddlewareFunc {
 
 			span.SetAttributes(attribute.Int("user", int(u.ID)))
 
-			if u.AuthToken.UploadOnly && level >= PermLevelUser {
+			if u.authToken.UploadOnly && level >= PermLevelUser {
 				return &HttpError{
 					Code:    http.StatusForbidden,
 					Reason:  ERR_NOT_AUTHORIZED,
