@@ -86,7 +86,7 @@ func (s *AuthorizationServer) Connect() *Authorization {
 }
 
 // Checking if the token is valid.
-func (s *Authorization) CheckAuthorizationToken(token string) (*User, error) {
+func (s *Authorization) CheckAuthorizationToken(token string, permission int) (*User, error) {
 	var authToken Token
 	if err := s.DB.First(&authToken, "token = ?", token).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -108,12 +108,12 @@ func (s *Authorization) CheckAuthorizationToken(token string) (*User, error) {
 	}
 
 	var user User
-	if err := s.DB.First(&user, "id = ?", authToken.User).Error; err != nil {
+	if err := s.DB.First(&user, "id = ? and perm = ?", authToken.User, permission).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, &HttpError{
 				Code:    http.StatusUnauthorized,
 				Reason:  ERR_INVALID_TOKEN,
-				Details: "no user exists for the spicified api key",
+				Details: "no user exists for the specified api key",
 			}
 		}
 		return nil, err
