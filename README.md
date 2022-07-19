@@ -7,6 +7,10 @@ easily build authenticated APIs for Estuary.
 
 This module can be imported as a module and added to the Estuary middleware func. 
 
+
+![image](https://user-images.githubusercontent.com/4479171/179639246-2ae8c27c-fd9b-416f-8dda-be443f3d7526.png)
+
+
 ## Server (WIP)
 
 ## Import module
