@@ -1,7 +1,5 @@
 # Estuary Auth
 
-*This is a work in progress*
-
 Module for Estuary API authentication. It's to decouple the authorization from Estuary core to allow any API developers to
 easily build authenticated APIs for Estuary.
 
