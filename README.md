@@ -13,7 +13,7 @@ This module can be imported as a module and added to the Estuary middleware func
 
 ## Import module
 ```
-go get github.com/alvin-reyes/estuary-auth
+go get github.com/application-research/estuary-auth
 ```
 
 ## Initialize
