@@ -5,6 +5,11 @@ easily build authenticated APIs for Estuary.
 
 This module can be imported as a module and added to the Estuary middleware func. 
 
+## Import
+```
+go get github.com/application-research/estuary-auth/core
+```
+
 ## Initialize
 ```
 //  initialize your database connection (estuary) - readonly
