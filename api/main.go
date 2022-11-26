@@ -95,7 +95,7 @@ func NewAuthRouterConfig() {
 	//	tricky redirection using a proxy
 	// Start server
 	fmt.Print("start")
-	e.Logger.Fatal(e.Start("127.0.0.1:1313"))
+	e.Logger.Fatal(e.Start("0.0.0.0:1313"))
 }
 
 // `BasicUserApiCheckHandler` is a function that takes a `echo.Context` and returns an `error`
