@@ -1,6 +1,8 @@
 package core
 
 import (
+	"crypto/sha256"
+	b64 "encoding/base64"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -108,4 +110,29 @@ func ExtractAuth(c echo.Context) (string, error) {
 		}
 	}
 	return parts[1], nil
+}
+
+func GetPasswordHash(password, salt string, dialector string) string {
+	switch dialector { // can be "postgres", "sqlite"
+	case "sqlite": // for sqlite, embedded db.
+		return GetPasswordHashBase(password, salt)
+	default: // default (postgres or other rdbms)
+		return GetPasswordHashBase64(password, salt)
+	}
+}
+
+func GetPasswordHashBase(password, salt string) string {
+	passHashBytes := sha256.Sum256([]byte(password + "." + salt))
+	return string(passHashBytes[:])
+}
+
+func GetPasswordHashBase64(password, salt string) string {
+	passHashBytes := sha256.Sum256([]byte(password + "." + salt))
+	return b64.StdEncoding.EncodeToString(passHashBytes[:])
+}
+
+func GetTokenHash(token string) string {
+	tokenHashBytes := sha256.Sum256([]byte(token))
+	// needs to be URL-encodable to send revoke token requests by hash
+	return b64.RawURLEncoding.EncodeToString(tokenHashBytes[:])
 }

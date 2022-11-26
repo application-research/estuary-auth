@@ -6,9 +6,11 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -34,14 +36,18 @@ type AuthToken struct {
 
 type User struct {
 	gorm.Model
-	UUID            string `gorm:"unique"`
-	Username        string `gorm:"unique"`
-	PassHash        string
-	DID             string
-	UserEmail       string
-	authToken       AuthToken
-	Perm            int
-	Flags           int
+	UUID     string `gorm:"unique"`
+	Username string `gorm:"unique"`
+	Salt     string
+	PassHash string
+	DID      string
+
+	UserEmail string
+
+	AuthToken AuthToken `gorm:"-"`
+	Perm      int
+	Flags     int
+
 	StorageDisabled bool
 }
 
@@ -86,7 +92,7 @@ func (s *AuthorizationServer) Connect() Authorization {
 }
 
 // Checking if the token is valid.
-func (s Authorization) CheckAuthorizationToken(token string, permission int) (*User, error) {
+func (s Authorization) CheckAuthorizationToken(token string) (*User, error) {
 	var authToken AuthToken
 	if err := s.DB.First(&authToken, "token = ?", token).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -119,7 +125,7 @@ func (s Authorization) CheckAuthorizationToken(token string, permission int) (*U
 		return nil, err
 	}
 
-	user.authToken = authToken
+	user.AuthToken = authToken
 	return &user, nil
 }
 
@@ -139,14 +145,14 @@ func (s Authorization) AuthRequired(level int) echo.MiddlewareFunc {
 			defer span.End()
 			c.SetRequest(c.Request().WithContext(ctx))
 
-			u, err := s.CheckAuthorizationToken(auth, level)
+			u, err := s.CheckAuthorizationToken(auth)
 			if err != nil {
 				return err
 			}
 
 			span.SetAttributes(attribute.Int("user", int(u.ID)))
 
-			if u.authToken.UploadOnly && level >= PermLevelUser {
+			if u.AuthToken.UploadOnly && level >= PermLevelUser {
 				return &HttpError{
 					Code:    http.StatusForbidden,
 					Reason:  ERR_NOT_AUTHORIZED,
@@ -166,4 +172,151 @@ func (s Authorization) AuthRequired(level int) echo.MiddlewareFunc {
 			}
 		}
 	}
+}
+
+type ApiKeyParam struct {
+	Username string
+	Token    string `json:"api`
+}
+type AuthenticationResult struct {
+	Username string     `json:"username,omitempty"`
+	Password string     `json:"password,omitempty"`
+	Salt     string     `json:"salt,omitempty"`
+	Result   AuthResult `json:"result"`
+}
+
+type AuthResult struct {
+	Validated bool   `json:"validated"`
+	Details   string `json:"details"`
+}
+type AuthenticationParam struct {
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+}
+
+func (s Authorization) AuthenticateApiKey(param ApiKeyParam) AuthenticationResult {
+	var authToken AuthToken
+	if err := s.DB.First(&authToken, "token = ?", param.Token).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return AuthenticationResult{
+				Username: param.Username,
+				Result: AuthResult{
+					Validated: false,
+					Details:   "api key does not exists",
+				},
+			}
+		}
+	}
+
+	if authToken.Expiry.Before(time.Now()) {
+		return AuthenticationResult{
+			Username: param.Username,
+			Result: AuthResult{
+				Validated: false,
+				Details:   "api key expired",
+			},
+		}
+	}
+	return AuthenticationResult{
+		Username: param.Username,
+		Result: AuthResult{
+			Validated: true,
+			Details:   "api key validated",
+		},
+	}
+}
+
+func (s Authorization) AuthenticateApiKeyUser(param ApiKeyParam) AuthenticationResult {
+	var authToken AuthToken
+	if err := s.DB.First(&authToken, "token = ?", param.Token).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return AuthenticationResult{
+				Username: param.Username,
+				Result: AuthResult{
+					Validated: false,
+					Details:   "api key does not exists",
+				},
+			}
+		}
+	}
+
+	if authToken.Expiry.Before(time.Now()) {
+		return AuthenticationResult{
+			Username: param.Username,
+			Result: AuthResult{
+				Validated: false,
+				Details:   ERR_TOKEN_EXPIRED,
+			},
+		}
+	}
+
+	var user User
+	if err := s.DB.First(&user, "id = ?", authToken.User).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return AuthenticationResult{
+				Username: param.Username,
+				Result: AuthResult{
+					Validated: false,
+					Details:   "no user exists for the specified api key",
+				},
+			}
+		}
+	}
+
+	return AuthenticationResult{
+		Username: param.Username,
+		Result: AuthResult{
+			Validated: true,
+			Details:   "api key and user is validated",
+		},
+	}
+}
+func (s Authorization) AuthenticateUserPassword(param AuthenticationParam) AuthenticationResult {
+
+	var user User
+	if err := s.DB.First(&user, "username = ?", strings.ToLower(param.Username)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return AuthenticationResult{
+				Username: param.Username,
+				Result: AuthResult{
+					Validated: false,
+					Details:   "user not found",
+				},
+			}
+		}
+	}
+
+	//	validate password
+	//	SQLlite and Postgres has incompatibility in hashing and even though we are dropping support for sqlite later,
+	//	we still need to accommodate those who chooses to use SQLite for experimentation purposes.
+	var valid = true
+	var dbDialect = s.DB.Config.Dialector.Name()
+
+	//	check password hash (this is the way).
+	if (user.Salt != "" && (user.PassHash != GetPasswordHash(param.Password, user.Salt, dbDialect))) || (user.Salt == "" && user.PassHash != param.Password) {
+		valid = false                                                                            //	assume it's not valid.
+		if bcrypt.CompareHashAndPassword([]byte(user.PassHash), []byte(param.Password)) == nil { //	we are using bcrypt, so we need to rehash it.
+			valid = true
+		}
+	}
+
+	if !valid {
+		return AuthenticationResult{
+			Username: param.Username,
+			Result: AuthResult{
+				Validated: false,
+				Details:   "user not found",
+			},
+		}
+	}
+
+	// Successful authentication
+	return AuthenticationResult{
+		Username: param.Username,
+		Result: AuthResult{
+			Validated: true,
+			Details:   "user authenticated",
+		},
+	}
+
 }
