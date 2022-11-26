@@ -1,4 +1,4 @@
-package auth
+package core
 
 import (
 	"github.com/google/uuid"

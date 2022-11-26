@@ -1,4 +1,4 @@
-package auth
+package core
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-//	Authorization structures
+// Authorization structures
 type AuthorizationServer struct {
 	// The authorization server's identifier.
 	Authorization
@@ -45,18 +45,18 @@ type User struct {
 	StorageDisabled bool
 }
 
-//	Initialize
+// Initialize
 func Init() *AuthorizationServer {
 	return &AuthorizationServer{} // create the authorization server
 }
 
-//	Sets a database connection.
+// Sets a database connection.
 func (s *AuthorizationServer) SetDB(db *gorm.DB) *AuthorizationServer {
 	s.DB = db // connect to the database
 	return s
 }
 
-//	Set database connection with a string dsn
+// Set database connection with a string dsn
 func (s *AuthorizationServer) SetDBWithString(dbConnection string) *AuthorizationServer {
 
 	db, err := gorm.Open(postgres.Open(dbConnection), &gorm.Config{})
@@ -80,7 +80,7 @@ func (s *AuthorizationServer) SetDBConfig(dbConnection postgres.Config) *Authori
 	return s
 }
 
-//	Connect to the server and return the Authorization object
+// Connect to the server and return the Authorization object
 func (s *AuthorizationServer) Connect() Authorization {
 	return s.Authorization
 }
