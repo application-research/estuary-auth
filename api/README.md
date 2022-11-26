@@ -3,6 +3,12 @@
 This is the service rest api for Estuary Auth. It's to decouple the authorization from Estuary core to allow any API developers
 to easily build authenticated APIs for Estuary.
 
+## Install
+```
+go build -tags netgo -ldflags '-s -w' -o estuary-auth-api
+./estuary-auth-api
+```
+
 ## Running
 
 create a .env with the following
@@ -16,7 +22,7 @@ DB_PORT=
 
 run the node
 ```
-./estuary-api
+./estuary-auth-api
 ```
 
 This opens up a port at 1313 by default
