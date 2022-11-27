@@ -19,7 +19,6 @@ DB_PORT=
 
 run the node
 ```
-
 ./estuary-metrics-api
 ```
 
