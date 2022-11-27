@@ -3,11 +3,14 @@
 This is the service rest api for Estuary Auth. It's to decouple the authorization from Estuary core to allow any API developers
 to easily build authenticated APIs for Estuary.
 
+## Install
+```
+go build -tags netgo -ldflags '-s -w' -o estuary-auth-api
+./estuary-auth-api
+```
+
 ## Running
 
-```
-go build -tags netgo -ldflags '-s -w' -o estuary-metrics-api
-```
 create a .env with the following
 ```
 DB_NAME=
@@ -19,14 +22,14 @@ DB_PORT=
 
 run the node
 ```
-./estuary-metrics-api
+./estuary-auth-api
 ```
 
 This opens up a port at 1313 by default
 
 ## Usage
 ### /check-api-key 
-- URL: http://127.0.0.1:1313/check-api-key
+- URL: https://estuary-auth-api.onrender.com/check-api-key
 - Method: POST
 ```
 {
@@ -35,7 +38,7 @@ This opens up a port at 1313 by default
 ```
 
 ### /check-user-api-key
-- URL: http://127.0.0.1:1313/check-user-api-key
+- URL: https://estuary-auth-api.onrender.com/check-user-api-key
 - Method: POST
 ```
 {
@@ -44,7 +47,7 @@ This opens up a port at 1313 by default
 }
 ```
 ### /check-user-pass
-- URL: http://127.0.0.1:1313/check-user-pass
+- URL: https://estuary-auth-api.onrender.com/check-user-pass
 - Method: POST
 ```
 {
@@ -52,3 +55,6 @@ This opens up a port at 1313 by default
     "Password":"<password>"
 }
 ```
+
+# Remote endpoint
+This service api is currently available here `https://estuary-auth-api.onrender.com/`
