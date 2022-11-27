@@ -5,6 +5,9 @@ to easily build authenticated APIs for Estuary.
 
 ## Running
 
+```
+go build -tags netgo -ldflags '-s -w' -o estuary-metrics-api
+```
 create a .env with the following
 ```
 DB_NAME=
@@ -17,7 +20,7 @@ DB_PORT=
 run the node
 ```
 
-./estuary-api
+./estuary-metrics-api
 ```
 
 This opens up a port at 1313 by default
