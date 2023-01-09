@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 var (
@@ -41,6 +42,14 @@ func main() {
 	dsn := "host=" + dbHost + " user=" + dbUser + " password=" + dbPass + " dbname=" + dbName + " port=" + dbPort + " sslmode=disable TimeZone=Asia/Shanghai"
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	sqldb, err := db.DB()
+	if err != nil {
+		panic(err)
+	}
+	sqldb.SetMaxIdleConns(80)
+	sqldb.SetMaxOpenConns(250)
+	sqldb.SetConnMaxIdleTime(time.Hour)
+	sqldb.SetConnMaxLifetime(time.Hour)
 	if err != nil {
 		panic("failed to connect database")
 	}
