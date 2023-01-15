@@ -49,7 +49,7 @@ func main() {
 	sqldb.SetMaxIdleConns(80)
 	sqldb.SetMaxOpenConns(250)
 	sqldb.SetConnMaxIdleTime(time.Hour)
-	sqldb.SetConnMaxLifetime(time.Hour)
+	sqldb.SetConnMaxLifetime(time.Second * 60)
 	if err != nil {
 		panic("failed to connect database")
 	}
