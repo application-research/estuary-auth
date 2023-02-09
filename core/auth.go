@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/xerrors"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"net/http"
@@ -93,13 +94,15 @@ func (s *AuthorizationServer) Connect() Authorization {
 
 // Checking if the token is valid.
 func (s Authorization) CheckAuthorizationToken(token string) (*User, error) {
+	//cached, ok := s.cacher.Get(token)
 	var authToken AuthToken
-	if err := s.DB.First(&authToken, "token = ?", token).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+	tokenHash := GetTokenHash(token)
+	if err := s.DB.First(&authToken, "token = ? OR token_hash = ?", token, tokenHash).Error; err != nil {
+		if xerrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, &HttpError{
 				Code:    http.StatusUnauthorized,
 				Reason:  ERR_INVALID_TOKEN,
-				Details: "api key does not exists",
+				Details: "api key does not exist",
 			}
 		}
 		return nil, err
@@ -115,11 +118,11 @@ func (s Authorization) CheckAuthorizationToken(token string) (*User, error) {
 
 	var user User
 	if err := s.DB.First(&user, "id = ?", authToken.User).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if xerrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, &HttpError{
 				Code:    http.StatusUnauthorized,
 				Reason:  ERR_INVALID_TOKEN,
-				Details: "no user exists for the specified api key",
+				Details: "no user exists for the spicified api key",
 			}
 		}
 		return nil, err
@@ -195,8 +198,10 @@ type AuthenticationParam struct {
 }
 
 func (s Authorization) AuthenticateApiKey(param ApiKeyParam) AuthenticationResult {
+
 	var authToken AuthToken
-	if err := s.DB.First(&authToken, "token = ?", param.Token).Error; err != nil {
+	tokenHash := GetTokenHash(param.Token)
+	if err := s.DB.First(&authToken, "token = ? OR token_hash = ?", param.Token, tokenHash).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return AuthenticationResult{
 				Username: param.Username,
