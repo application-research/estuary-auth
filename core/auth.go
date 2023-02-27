@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -29,10 +30,13 @@ type Authorization struct {
 // Data models
 type AuthToken struct {
 	gorm.Model
-	Token      string `gorm:"unique"`
+	Token      string `gorm:"unique;->"` // read only to prevent storing new tokens but not break existing tokens
+	TokenHash  string `gorm:"unique"`
+	Label      string
 	User       uint
 	UploadOnly bool
 	Expiry     time.Time
+	IsSession  bool
 }
 
 type User struct {
@@ -92,7 +96,33 @@ func (s *AuthorizationServer) Connect() Authorization {
 	return s.Authorization
 }
 
-// Checking if the token is valid.
+const TokenExpiryDurationPermanent = time.Hour * 24 * 365 * 100
+
+func (s Authorization) NewUserAndAuthToken() (*AuthToken, error) {
+
+	var user User
+	s.DB.Model(&user).Where("id = ?", "260").First(&user)
+
+	expiry := time.Now().Add(TokenExpiryDurationPermanent)
+
+	token := "EST" + uuid.New().String() + "ARY"
+	authToken := &AuthToken{
+		Token:      token,
+		TokenHash:  GetTokenHash(token),
+		Label:      "From DELTA",
+		User:       user.ID,
+		Expiry:     expiry,
+		UploadOnly: true,
+		IsSession:  true,
+	}
+	if err := s.DB.Create(authToken).Error; err != nil {
+		return nil, err
+	}
+
+	return authToken, nil
+}
+
+// CheckAuthorizationToken Checking if the token is valid.
 func (s Authorization) CheckAuthorizationToken(token string) (*User, error) {
 	//cached, ok := s.cacher.Get(token)
 	var authToken AuthToken

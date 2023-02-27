@@ -101,11 +101,22 @@ func NewAuthRouterConfig() {
 	e.POST("/check-api-key", BasicUserApiCheckHandler)
 	e.POST("/check-user-api-key", BasicApiUserCheckHandler)
 	e.POST("/check-user-pass", BasicUserPassHandler)
+	e.POST("/register-user", BasicRegisterUserHandler)
 
 	//	tricky redirection using a proxy
 	// Start server
 	fmt.Print("start")
 	e.Logger.Fatal(e.Start("0.0.0.0:1313"))
+}
+
+func BasicRegisterUserHandler(c echo.Context) error {
+	var user core.User
+	if err := c.Bind(&user); err != nil {
+		return err
+	}
+
+	result, _ := auth.NewUserAndAuthToken()
+	return c.JSON(http.StatusOK, result)
 }
 
 // `BasicUserApiCheckHandler` is a function that takes a `echo.Context` and returns an `error`
