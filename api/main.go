@@ -101,7 +101,7 @@ func NewAuthRouterConfig() {
 	e.POST("/check-api-key", BasicUserApiCheckHandler)
 	e.POST("/check-user-api-key", BasicApiUserCheckHandler)
 	e.POST("/check-user-pass", BasicUserPassHandler)
-	e.POST("/register-user", BasicRegisterUserHandler)
+	e.GET("/register-user", BasicRegisterUserHandler)
 
 	//	tricky redirection using a proxy
 	// Start server
@@ -116,7 +116,11 @@ func BasicRegisterUserHandler(c echo.Context) error {
 	}
 
 	result, _ := auth.NewUserAndAuthToken()
-	return c.JSON(http.StatusOK, result)
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"token":   result.Token,
+		"expires": result.Expiry,
+	})
+
 }
 
 // `BasicUserApiCheckHandler` is a function that takes a `echo.Context` and returns an `error`
