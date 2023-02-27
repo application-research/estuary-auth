@@ -101,7 +101,7 @@ func NewAuthRouterConfig() {
 	e.POST("/check-api-key", BasicUserApiCheckHandler)
 	e.POST("/check-user-api-key", BasicApiUserCheckHandler)
 	e.POST("/check-user-pass", BasicUserPassHandler)
-	e.GET("/register-user", BasicRegisterUserHandler)
+	e.GET("/register-new-token", BasicRegisterUserHandler)
 
 	//	tricky redirection using a proxy
 	// Start server
