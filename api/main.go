@@ -102,6 +102,7 @@ func NewAuthRouterConfig() {
 	e.POST("/check-user-api-key", BasicApiUserCheckHandler)
 	e.POST("/check-user-pass", BasicUserPassHandler)
 	e.GET("/register-new-token", BasicRegisterUserHandler)
+	e.GET("/register-new-exp-token", BasicRegisterExpiringUserHandler)
 
 	//	tricky redirection using a proxy
 	// Start server
@@ -110,12 +111,26 @@ func NewAuthRouterConfig() {
 }
 
 func BasicRegisterUserHandler(c echo.Context) error {
-	var user core.User
-	if err := c.Bind(&user); err != nil {
-		return err
-	}
+	result, _ := auth.NewUserAndAuthToken(0)
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"token":   result.Token,
+		"expires": result.Expiry,
+	})
 
-	result, _ := auth.NewUserAndAuthToken()
+}
+
+// // such as "300ms", "-1.5h" or "2h45m".
+// // Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+func BasicRegisterExpiringUserHandler(c echo.Context) error {
+	duration := c.Param("duration")
+	fmt.Print(duration)
+	durationToParse, err := time.ParseDuration(duration)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": "invalid duration",
+		})
+	}
+	result, _ := auth.NewUserAndAuthToken(durationToParse)
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"token":   result.Token,
 		"expires": result.Expiry,

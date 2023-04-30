@@ -98,14 +98,20 @@ func (s *AuthorizationServer) Connect() Authorization {
 
 const TokenExpiryDurationPermanent = time.Hour * 24 * 365 * 100
 
-func (s Authorization) NewUserAndAuthToken() (*AuthToken, error) {
+func (s Authorization) NewUserAndAuthToken(expDuration time.Duration) (*AuthToken, error) {
 
 	var user User
 	s.DB.Model(&user).Where("id = ?", "260").First(&user)
 
-	expiry := time.Now().Add(TokenExpiryDurationPermanent)
+	var expiry time.Time
+	if expDuration == 0 {
+		expiry = time.Now().Add(TokenExpiryDurationPermanent)
+	} else {
+		expiry = time.Now().Add(expDuration)
+	}
 
 	token := "EST" + uuid.New().String() + "ARY"
+	fmt.Printf("Token: %s", token)
 	authToken := &AuthToken{
 		Token:      token,
 		TokenHash:  GetTokenHash(token),
@@ -240,16 +246,6 @@ func (s Authorization) AuthenticateApiKey(param ApiKeyParam) AuthenticationResul
 					Details:   "api key does not exists",
 				},
 			}
-		}
-	}
-
-	if authToken.Expiry.Before(time.Now()) {
-		return AuthenticationResult{
-			Username: param.Username,
-			Result: AuthResult{
-				Validated: false,
-				Details:   "api key expired",
-			},
 		}
 	}
 	return AuthenticationResult{
