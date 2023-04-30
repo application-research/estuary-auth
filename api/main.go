@@ -122,7 +122,7 @@ func BasicRegisterUserHandler(c echo.Context) error {
 // // such as "300ms", "-1.5h" or "2h45m".
 // // Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 func BasicRegisterExpiringUserHandler(c echo.Context) error {
-	duration := c.Param("duration")
+	duration := c.QueryParam("duration")
 	fmt.Print(duration)
 	durationToParse, err := time.ParseDuration(duration)
 	if err != nil {
