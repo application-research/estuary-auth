@@ -248,6 +248,17 @@ func (s Authorization) AuthenticateApiKey(param ApiKeyParam) AuthenticationResul
 			}
 		}
 	}
+
+	if authToken.Expiry.Before(time.Now()) {
+		return AuthenticationResult{
+			Username: param.Username,
+			Result: AuthResult{
+				Validated: false,
+				Details:   "api key expired",
+			},
+		}
+	}
+
 	return AuthenticationResult{
 		Username: param.Username,
 		Result: AuthResult{
