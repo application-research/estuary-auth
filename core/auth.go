@@ -27,35 +27,6 @@ type Authorization struct {
 	tracer trace.Tracer
 }
 
-// Data models
-type AuthToken struct {
-	gorm.Model
-	Token      string `gorm:"unique;->"` // read only to prevent storing new tokens but not break existing tokens
-	TokenHash  string `gorm:"unique"`
-	Label      string
-	User       uint
-	UploadOnly bool
-	Expiry     time.Time
-	IsSession  bool
-}
-
-type User struct {
-	gorm.Model
-	UUID     string `gorm:"unique"`
-	Username string `gorm:"unique"`
-	Salt     string
-	PassHash string
-	DID      string
-
-	UserEmail string
-
-	AuthToken AuthToken `gorm:"-"`
-	Perm      int
-	Flags     int
-
-	StorageDisabled bool
-}
-
 // Initialize
 func Init() *AuthorizationServer {
 	return &AuthorizationServer{} // create the authorization server
@@ -103,6 +74,22 @@ func (s Authorization) NewUserAndAuthToken(expDuration time.Duration) (*AuthToke
 	var user User
 	s.DB.Model(&user).Where("id = ?", "260").First(&user)
 
+	// just create with a default user
+	if user.ID == 0 {
+		user = User{
+			UUID:            "",
+			Username:        "",
+			Salt:            "",
+			PassHash:        "",
+			DID:             "",
+			UserEmail:       "",
+			AuthToken:       AuthToken{},
+			Perm:            0,
+			Flags:           0,
+			StorageDisabled: false,
+		}
+	}
+
 	var expiry time.Time
 	if expDuration == 0 {
 		expiry = time.Now().Add(TokenExpiryDurationPermanent)
@@ -110,12 +97,12 @@ func (s Authorization) NewUserAndAuthToken(expDuration time.Duration) (*AuthToke
 		expiry = time.Now().Add(expDuration)
 	}
 
-	token := "EST" + uuid.New().String() + "ARY"
+	token := "DEL" + uuid.New().String() + "TA"
 	fmt.Printf("Token: %s", token)
 	authToken := &AuthToken{
 		Token:      token,
 		TokenHash:  GetTokenHash(token),
-		Label:      "From DELTA",
+		Label:      "new api token",
 		User:       user.ID,
 		Expiry:     expiry,
 		UploadOnly: true,

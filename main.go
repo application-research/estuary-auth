@@ -6,8 +6,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/spf13/viper"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 	"net/http"
 	_ "net/http"
 	"os"
@@ -21,7 +19,7 @@ var (
 	// RuntimeVer date string of when build was performed filled in by -X compile flag
 	auth *core.AuthorizationServer
 
-	// OsSignal signal used to shutdown
+	// OsSignal signal used to shut down
 	OsSignal chan os.Signal
 )
 
@@ -30,18 +28,9 @@ func main() {
 	viper.SetConfigFile(".env")
 	err := viper.ReadInConfig()
 
-	dbHost, okHost := viper.Get("DB_HOST").(string)
-	dbUser, okUser := viper.Get("DB_USER").(string)
-	dbPass, okPass := viper.Get("DB_PASS").(string)
-	dbName, okName := viper.Get("DB_NAME").(string)
-	dbPort, okPort := viper.Get("DB_PORT").(string)
-	if !okHost || !okUser || !okPass || !okName || !okPort {
-		panic("invalid database configuration")
-	}
+	dsn := viper.Get("DB_DSN").(string)
 
-	dsn := "host=" + dbHost + " user=" + dbUser + " password=" + dbPass + " dbname=" + dbName + " port=" + dbPort + " sslmode=disable TimeZone=Asia/Shanghai"
-
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := core.OpenDatabase(dsn)
 	sqldb, err := db.DB()
 	if err != nil {
 		panic(err)
@@ -101,6 +90,7 @@ func NewAuthRouterConfig() {
 	e.POST("/check-api-key", BasicUserApiCheckHandler)
 	e.POST("/check-user-api-key", BasicApiUserCheckHandler)
 	e.POST("/check-user-pass", BasicUserPassHandler)
+	e.GET("/register-new-user", BasicRegisterUserHandler)
 	e.GET("/register-new-token", BasicRegisterUserHandler)
 	e.GET("/register-new-exp-token", BasicRegisterExpiringUserHandler)
 
