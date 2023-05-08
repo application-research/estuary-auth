@@ -55,8 +55,3 @@ This opens up a port at 1313 by default
 
 # Remote endpoint
 This service api is currently available here `https://estuary-auth-api.onrender.com/`
-
-
-# View the usage docs here 
-- To view the rest api go to [api](api).
-- To view the  [core](core) library.
