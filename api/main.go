@@ -119,7 +119,7 @@ func BasicRegisterUserHandler(c echo.Context) error {
 
 }
 
-// // such as "300ms", "-1.5h" or "2h45m".
+// BasicRegisterExpiringUserHandler // such as "300ms", "-1.5h" or "2h45m".
 // // Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 func BasicRegisterExpiringUserHandler(c echo.Context) error {
 	duration := c.QueryParam("duration")
@@ -138,7 +138,7 @@ func BasicRegisterExpiringUserHandler(c echo.Context) error {
 
 }
 
-// `BasicUserApiCheckHandler` is a function that takes a `echo.Context` and returns an `error`
+// BasicUserApiCheckHandler `BasicUserApiCheckHandler` is a function that takes a `echo.Context` and returns an `error`
 func BasicUserApiCheckHandler(c echo.Context) error {
 	var apiKeyParam core.ApiKeyParam
 	if err := c.Bind(&apiKeyParam); err != nil {

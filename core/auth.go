@@ -237,6 +237,7 @@ func (s Authorization) AuthenticateApiKey(param ApiKeyParam) AuthenticationResul
 
 	var authToken AuthToken
 	tokenHash := GetTokenHash(param.Token)
+	fmt.Print(tokenHash)
 	if err := s.DB.First(&authToken, "token = ? OR token_hash = ?", param.Token, tokenHash).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return AuthenticationResult{
