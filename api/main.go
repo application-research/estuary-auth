@@ -39,7 +39,7 @@ func main() {
 		panic("invalid database configuration")
 	}
 
-	dsn := "host=" + dbHost + " user=" + dbUser + " password=" + dbPass + " dbname=" + dbName + " port=" + dbPort + " sslmode=disable TimeZone=Asia/Shanghai"
+	dsn := "host=" + dbHost + " user=" + dbUser + " password=" + dbPass + " dbname=" + dbName + " port=" + dbPort + " sslmode=prefer TimeZone=Asia/Shanghai"
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	sqldb, err := db.DB()
