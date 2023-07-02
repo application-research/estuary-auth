@@ -218,10 +218,19 @@ type ApiKeyParam struct {
 	Token    string `json:"api`
 }
 type AuthenticationResult struct {
-	Username string     `json:"username,omitempty"`
-	Password string     `json:"password,omitempty"`
-	Salt     string     `json:"salt,omitempty"`
-	Result   AuthResult `json:"result"`
+	Username string         `json:"username,omitempty"`
+	Password string         `json:"password,omitempty"`
+	User     UserAuthResult `json:"user,omitempty"`
+	Salt     string         `json:"salt,omitempty"`
+	Result   AuthResult     `json:"result"`
+}
+
+type UserAuthResult struct {
+	Username        string `json:"username,omitempty"`
+	Perm            int    `json:"perm,omitempty"`
+	Email           string `json:"email,omitempty"`
+	Flags           int    `json:"flags,omitempty"`
+	StorageDisabled bool   `json:"storage_disable,omitempty"`
 }
 
 type AuthResult struct {
@@ -260,8 +269,23 @@ func (s Authorization) AuthenticateApiKey(param ApiKeyParam) AuthenticationResul
 		}
 	}
 
+	// get the user details and return
+	var user User
+	if err := s.DB.First(&user, "id = ?", authToken.User).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return AuthenticationResult{
+				Username: param.Username,
+				Result: AuthResult{
+					Validated: false,
+					Details:   "api key user does not exists",
+				},
+			}
+		}
+	}
+
 	return AuthenticationResult{
 		Username: param.Username,
+		User:     UserAuthResult{Username: user.Username, Perm: user.Perm, Email: user.UserEmail, Flags: user.Flags, StorageDisabled: user.StorageDisabled},
 		Result: AuthResult{
 			Validated: true,
 			Details:   "api key validated",
@@ -308,6 +332,7 @@ func (s Authorization) AuthenticateApiKeyUser(param ApiKeyParam) AuthenticationR
 
 	return AuthenticationResult{
 		Username: param.Username,
+		User:     UserAuthResult{Username: user.Username, Perm: user.Perm, Email: user.UserEmail, Flags: user.Flags, StorageDisabled: user.StorageDisabled},
 		Result: AuthResult{
 			Validated: true,
 			Details:   "api key and user is validated",
